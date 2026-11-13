@@ -154,6 +154,12 @@ def graph_viz():
     return send_file("neo4j_viz.html")
 
 
+@app.route("/lib/<path:path>")
+def send_lib(path):
+    from flask import send_from_directory
+    return send_from_directory("lib", path)
+
+
 @app.route("/api/chat", methods=["POST"])
 def chat():
     data = request.get_json() or {}
