@@ -71,7 +71,7 @@ def main():
             {"id": _id, "values": emb, "metadata": meta}
             for _id, emb, meta in zip(ids, embeddings, metas)
         ]
-        index.upsert(vectors)
+        index.upsert(vectors=vectors)
         time.sleep(0.2)
 
     print("All items uploaded successfully.")
