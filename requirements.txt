@@ -1,8 +1,7 @@
 neo4j
-cohere
+google-generativeai
 pinecone
 pyvis
 networkx
 tqdm
-python-dotenv
 flask

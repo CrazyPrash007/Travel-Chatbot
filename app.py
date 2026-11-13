@@ -2,25 +2,34 @@ import json
 import re
 from typing import List
 from flask import Flask, render_template, request, jsonify, send_file
-import cohere
+import google.generativeai as genai
 from pinecone import Pinecone, ServerlessSpec
 from neo4j import GraphDatabase
 import config
 
 app = Flask(__name__)
 
-EMBED_MODEL = "embed-english-light-v3.0"
-CHAT_MODEL = "command-r-plus-08-2024"
+EMBED_MODEL = "models/text-embedding-004"
+CHAT_MODEL = "gemini-1.5-flash"
 TOP_K = 5
 INDEX_NAME = config.PINECONE_INDEX_NAME
 
-# Initialize clients
+# Initialize Gemini
 try:
-    cohere_client = cohere.Client(config.COHERE_API_KEY)
+    genai.configure(api_key=config.GEMINI_API_KEY)
+    gemini_model = genai.GenerativeModel(
+        model_name=CHAT_MODEL,
+        system_instruction=(
+            "You are an energetic, fun Vietnam travel assistant! "
+            "Use the provided semantic search matches and graph knowledge facts to give an inspiring, "
+            "helpful, structured travel recommendation. Cite place names and node IDs."
+        )
+    )
 except Exception as e:
-    cohere_client = None
-    print(f"⚠️ Cohere client init error: {e}")
+    gemini_model = None
+    print(f"⚠️ Gemini init error: {e}")
 
+# Initialize Pinecone
 try:
     pc = Pinecone(api_key=config.PINECONE_API_KEY)
     if INDEX_NAME not in pc.list_indexes().names():
@@ -35,6 +44,7 @@ except Exception as e:
     pinecone_index = None
     print(f"⚠️ Pinecone client init error: {e}")
 
+# Initialize Neo4j
 try:
     neo4j_driver = GraphDatabase.driver(config.NEO4J_URI, auth=(config.NEO4J_USER, config.NEO4J_PASSWORD))
 except Exception as e:
@@ -43,11 +53,13 @@ except Exception as e:
 
 
 def embed_text(text: str) -> List[float]:
-    """Generates a 384-dim Cohere embedding for the user search query."""
-    if not cohere_client:
-        raise RuntimeError("Cohere client is not configured.")
-    resp = cohere_client.embed(texts=[text], model=EMBED_MODEL, input_type="search_query")
-    return resp.embeddings[0]
+    """Generates a 768-dim Gemini embedding for the user search query."""
+    res = genai.embed_content(
+        model=EMBED_MODEL,
+        content=text,
+        task_type="retrieval_query"
+    )
+    return res["embedding"]
 
 
 def pinecone_query(query_text: str, top_k=TOP_K):
@@ -100,43 +112,26 @@ def fetch_graph_context(node_ids: List[str]):
 
 
 def generate_llm_answer(user_query, matches, graph_facts):
-    """Generates an answer using Cohere command-r-plus, with a resilient fallback if rate-limited."""
-    # Build prompt
-    system_prompt = (
-        "You are an energetic, fun Vietnam travel assistant! "
-        "Use the provided semantic search matches and graph knowledge facts to give an inspiring, "
-        "helpful, structured travel recommendation. Cite places and give concrete tips."
-    )
-    
+    """Generates an answer using Google Gemini 1.5 Flash."""
     vec_snips = [f"- {m['name']} ({m['city']}, {m['type']}, relevance: {m['score']}%)" for m in matches]
     graph_snips = [f"- ({f['source']}) -[{f['rel']}]-> ({f['target_name']})" for f in graph_facts[:15]]
 
     content = (
         f"User Query: {user_query}\n\n"
-        f"Top Semantic Matches (from Pinecone):\n" + "\n".join(vec_snips) + "\n\n"
+        f"Top Semantic Matches (from Pinecone Vector DB):\n" + "\n".join(vec_snips) + "\n\n"
         f"Knowledge Graph Relationships (from Neo4j):\n" + "\n".join(graph_snips) + "\n\n"
-        "Provide a helpful travel guide answering the query directly with recommended destinations, "
-        "what to do, and travel tips."
+        "Provide an inspiring, structured travel recommendation for the user. "
+        "Recommend top destinations, key activities, and practical travel tips."
     )
 
-    if cohere_client:
+    if gemini_model:
         try:
-            resp = cohere_client.chat(
-                model=CHAT_MODEL,
-                message=content,
-                preamble=system_prompt,
-                max_tokens=650,
-                temperature=0.3
-            )
+            resp = gemini_model.generate_content(content)
             return resp.text
         except Exception as e:
-            err_str = str(e)
-            if "429" in err_str:
-                print("⚠️ Cohere Trial limit hit (429), generating synthesized answer from Knowledge Graph.")
-            else:
-                print(f"⚠️ Cohere chat error: {e}")
+            print(f"⚠️ Gemini generate error: {e}")
 
-    # Resilient fallback synthesis if Cohere chat is rate-limited
+    # Fallback if API key is not yet set
     destinations = [f"**{m['name']}** ({m['city']})" for m in matches[:4]]
     dest_list = ", ".join(destinations) if destinations else "Vietnam's top destinations"
     
@@ -146,9 +141,9 @@ def generate_llm_answer(user_query, matches, graph_facts):
     
     rel_text = "\n".join(rel_highlights) if rel_highlights else "• Direct connections to regional travel hubs."
 
-    fallback = (
+    return (
         f"### 🌴 Top Recommendations for '{user_query}'\n\n"
-        f"Based on our **Pinecone vector similarity search**, the most relevant spots are: {dest_list}.\n\n"
+        f"Based on **Pinecone vector search**, the top matches are: {dest_list}.\n\n"
         f"#### 🗺️ Knowledge Graph Insights (Neo4j):\n"
         f"{rel_text}\n\n"
         f"#### 💡 Travel Tips:\n"
@@ -156,7 +151,6 @@ def generate_llm_answer(user_query, matches, graph_facts):
         f"2. **Local Transport:** Take high-speed trains or scenic coastal coaches between nearby hubs.\n"
         f"3. **Cuisine:** Don't miss the local street food and fresh seafood specialties in the evening night markets!"
     )
-    return fallback
 
 
 @app.route("/")
@@ -177,14 +171,9 @@ def chat():
         return jsonify({"error": "Query cannot be empty"}), 400
 
     try:
-        # Step 1: Pinecone Vector Retrieval
         matches = pinecone_query(query, top_k=TOP_K)
         match_ids = [m["id"] for m in matches]
-
-        # Step 2: Neo4j Graph Fact Traversal
         graph_facts = fetch_graph_context(match_ids)
-
-        # Step 3: LLM Generation
         answer = generate_llm_answer(query, matches, graph_facts)
 
         return jsonify({
@@ -198,5 +187,5 @@ def chat():
 
 
 if __name__ == "__main__":
-    print("🚀 Starting Vietnam Travel Chatbot Frontend on http://localhost:5000")
+    print("🚀 Starting Vietnam Travel Chatbot on http://localhost:5000")
     app.run(host="0.0.0.0", port=5000, debug=False)

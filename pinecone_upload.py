@@ -1,7 +1,7 @@
 import json
 import time
 from tqdm import tqdm
-import cohere
+import google.generativeai as genai
 from pinecone import Pinecone, ServerlessSpec
 import config
 
@@ -9,30 +9,46 @@ DATA_FILE = "vietnam_travel_dataset.json"
 BATCH_SIZE = 32
 
 INDEX_NAME = config.PINECONE_INDEX_NAME
-VECTOR_DIM = config.PINECONE_VECTOR_DIM  # 384 for embed-english-light-v3.0
+VECTOR_DIM = config.PINECONE_VECTOR_DIM  # 768 for models/text-embedding-004
 
-client = cohere.Client(config.COHERE_API_KEY)
+genai.configure(api_key=config.GEMINI_API_KEY)
 pc = Pinecone(api_key=config.PINECONE_API_KEY)
 
 existing_indexes = pc.list_indexes().names()
-if INDEX_NAME not in existing_indexes:
-    print(f"Creating index: {INDEX_NAME}")
+if INDEX_NAME in existing_indexes:
+    desc = pc.describe_index(INDEX_NAME)
+    if desc.dimension != VECTOR_DIM:
+        print(f"Recreating index '{INDEX_NAME}' with dimension {VECTOR_DIM} (was {desc.dimension})...")
+        pc.delete_index(INDEX_NAME)
+        time.sleep(2)
+        pc.create_index(
+            name=INDEX_NAME,
+            dimension=VECTOR_DIM,
+            metric="cosine",
+            spec=ServerlessSpec(cloud="aws", region="us-east-1")
+        )
+    else:
+        print(f"Index '{INDEX_NAME}' exists with matching dimension ({VECTOR_DIM}).")
+else:
+    print(f"Creating index: {INDEX_NAME} (dim={VECTOR_DIM})")
     pc.create_index(
         name=INDEX_NAME,
         dimension=VECTOR_DIM,
         metric="cosine",
         spec=ServerlessSpec(cloud="aws", region="us-east-1")
     )
-else:
-    print(f"Index '{INDEX_NAME}' already exists.")
 
 index = pc.Index(INDEX_NAME)
 
 
-def get_embeddings(texts, model="embed-english-light-v3.0"):
-    """Generates Cohere embeddings for a list of texts using the search_document input type."""
-    resp = client.embed(texts=texts, model=model, input_type="search_document")
-    return resp.embeddings
+def get_embeddings(texts, model="models/text-embedding-004"):
+    """Generates Gemini embeddings for a batch of texts."""
+    result = genai.embed_content(
+        model=model,
+        content=texts,
+        task_type="retrieval_document"
+    )
+    return result["embedding"]
 
 
 def chunked(iterable, n):
@@ -59,7 +75,7 @@ def main():
         }
         items.append((node["id"], semantic_text, meta))
 
-    print(f"Upserting {len(items)} items to Pinecone...")
+    print(f"Upserting {len(items)} items to Pinecone using Gemini embeddings...")
 
     for batch in tqdm(list(chunked(items, BATCH_SIZE)), desc="Uploading batches"):
         ids = [item[0] for item in batch]
@@ -72,9 +88,9 @@ def main():
             for _id, emb, meta in zip(ids, embeddings, metas)
         ]
         index.upsert(vectors=vectors)
-        time.sleep(0.2)
+        time.sleep(0.1)
 
-    print("All items uploaded successfully.")
+    print("All items uploaded successfully to Pinecone.")
 
 
 if __name__ == "__main__":
