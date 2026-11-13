@@ -1,62 +1,46 @@
-# pinecone_upload.py
 import json
 import time
 from tqdm import tqdm
-from openai import OpenAI
+import cohere
 from pinecone import Pinecone, ServerlessSpec
 import config
 
-# -----------------------------
-# Config
-# -----------------------------
 DATA_FILE = "vietnam_travel_dataset.json"
 BATCH_SIZE = 32
 
 INDEX_NAME = config.PINECONE_INDEX_NAME
-VECTOR_DIM = config.PINECONE_VECTOR_DIM  # 1536 for text-embedding-3-small
+VECTOR_DIM = config.PINECONE_VECTOR_DIM  # 384 for embed-english-light-v3.0
 
-# -----------------------------
-# Initialize clients
-# -----------------------------
-client = OpenAI(api_key=config.OPENAI_API_KEY)
+client = cohere.Client(config.COHERE_API_KEY)
 pc = Pinecone(api_key=config.PINECONE_API_KEY)
 
-# -----------------------------
-# Create managed index if it doesn't exist
-# -----------------------------
 existing_indexes = pc.list_indexes().names()
 if INDEX_NAME not in existing_indexes:
-    print(f"Creating managed index: {INDEX_NAME}")
+    print(f"Creating index: {INDEX_NAME}")
     pc.create_index(
         name=INDEX_NAME,
         dimension=VECTOR_DIM,
         metric="cosine",
-        spec=ServerlessSpec(
-            cloud="gcp",
-            region="us-east1-gcp"
-        )
+        spec=ServerlessSpec(cloud="aws", region="us-east-1")
     )
 else:
-    print(f"Index {INDEX_NAME} already exists.")
+    print(f"Index '{INDEX_NAME}' already exists.")
 
-# Connect to the index
 index = pc.Index(INDEX_NAME)
 
-# -----------------------------
-# Helper functions
-# -----------------------------
-def get_embeddings(texts, model="text-embedding-3-small"):
-    """Generate embeddings using OpenAI v1.0+ API."""
-    resp = client.embeddings.create(model=model, input=texts)
-    return [data.embedding for data in resp.data]
+
+def get_embeddings(texts, model="embed-english-light-v3.0"):
+    """Generates Cohere embeddings for a list of texts using the search_document input type."""
+    resp = client.embed(texts=texts, model=model, input_type="search_document")
+    return resp.embeddings
+
 
 def chunked(iterable, n):
+    """Splits an iterable into chunks of size n."""
     for i in range(0, len(iterable), n):
-        yield iterable[i:i+n]
+        yield iterable[i:i + n]
 
-# -----------------------------
-# Main upload
-# -----------------------------
+
 def main():
     with open(DATA_FILE, "r", encoding="utf-8") as f:
         nodes = json.load(f)
@@ -75,25 +59,23 @@ def main():
         }
         items.append((node["id"], semantic_text, meta))
 
-    print(f"Preparing to upsert {len(items)} items to Pinecone...")
+    print(f"Upserting {len(items)} items to Pinecone...")
 
     for batch in tqdm(list(chunked(items, BATCH_SIZE)), desc="Uploading batches"):
         ids = [item[0] for item in batch]
         texts = [item[1] for item in batch]
         metas = [item[2] for item in batch]
 
-        embeddings = get_embeddings(texts, model="text-embedding-3-small")
-
+        embeddings = get_embeddings(texts)
         vectors = [
             {"id": _id, "values": emb, "metadata": meta}
             for _id, emb, meta in zip(ids, embeddings, metas)
         ]
-
         index.upsert(vectors)
         time.sleep(0.2)
 
     print("All items uploaded successfully.")
 
-# -----------------------------
+
 if __name__ == "__main__":
     main()
