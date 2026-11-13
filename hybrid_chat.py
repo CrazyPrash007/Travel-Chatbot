@@ -1,26 +1,18 @@
 import json
 import re
 from typing import List
-import google.generativeai as genai
+from google import genai
 from pinecone import Pinecone, ServerlessSpec
 from neo4j import GraphDatabase
 import config
 
-EMBED_MODEL = "models/text-embedding-004"
-CHAT_MODEL = "gemini-1.5-flash"
+EMBED_MODEL = "gemini-embedding-001"
+CHAT_MODEL = "gemini-3.5-flash-lite"
 TOP_K = 5
 INDEX_NAME = config.PINECONE_INDEX_NAME
 
 try:
-    genai.configure(api_key=config.GEMINI_API_KEY)
-    chat_client = genai.GenerativeModel(
-        model_name=CHAT_MODEL,
-        system_instruction=(
-            "You are a helpful travel assistant for Vietnam. Use the provided semantic search "
-            "results and graph facts to answer the user's query clearly and concisely. "
-            "Cite place names and node IDs when referencing specific places or attractions."
-        )
-    )
+    gemini_client = genai.Client(api_key=config.GEMINI_API_KEY)
     print("✅ Google Gemini client initialized successfully")
 except Exception as e:
     print(f"❌ Failed to initialize Gemini client: {e}")
@@ -28,26 +20,10 @@ except Exception as e:
 
 try:
     pc = Pinecone(api_key=config.PINECONE_API_KEY)
+    index = pc.Index(INDEX_NAME)
     print("✅ Pinecone client initialized successfully")
 except Exception as e:
     print(f"❌ Failed to initialize Pinecone client: {e}")
-    exit(1)
-
-try:
-    existing_indexes = pc.list_indexes().names()
-    if INDEX_NAME not in existing_indexes:
-        pc.create_index(
-            name=INDEX_NAME,
-            dimension=config.PINECONE_VECTOR_DIM,
-            metric="cosine",
-            spec=ServerlessSpec(cloud="aws", region="us-east-1")
-        )
-        print(f"✅ Pinecone index '{INDEX_NAME}' created")
-    else:
-        print(f"✅ Using existing Pinecone index '{INDEX_NAME}'")
-    index = pc.Index(INDEX_NAME)
-except Exception as e:
-    print(f"❌ Failed to connect to Pinecone index: {e}")
     exit(1)
 
 try:
@@ -61,14 +37,14 @@ except Exception as e:
 
 
 def embed_text(text: str) -> List[float]:
-    """Generates a Gemini embedding for a user query string."""
+    """Generates a 768-dim Gemini embedding for the user query."""
     try:
-        res = genai.embed_content(
+        res = gemini_client.models.embed_content(
             model=EMBED_MODEL,
-            content=text,
-            task_type="retrieval_query"
+            contents=text,
+            config={"output_dimensionality": config.PINECONE_VECTOR_DIM}
         )
-        return res["embedding"]
+        return res.embeddings[0].values
     except Exception as e:
         print(f"❌ Error creating embedding: {e}")
         raise
@@ -151,6 +127,7 @@ def build_prompt(user_query, pinecone_matches, graph_facts):
     ]
 
     prompt = (
+        f"You are a helpful travel assistant for Vietnam. Answer the user concisely using the context below.\n\n"
         f"User query: {user_query}\n\n"
         "Top semantic matches (from Pinecone Vector DB):\n" + "\n".join(vec_context[:10]) + "\n\n"
         "Knowledge Graph facts (from Neo4j):\n" + "\n".join(graph_context[:20]) + "\n\n"
@@ -161,14 +138,17 @@ def build_prompt(user_query, pinecone_matches, graph_facts):
 
 def call_chat(prompt_text):
     """Sends prompt to Gemini chat model and returns the response text."""
-    resp = chat_client.generate_content(prompt_text)
+    resp = gemini_client.models.generate_content(
+        model=CHAT_MODEL,
+        contents=prompt_text
+    )
     return resp.text
 
 
 def interactive_chat():
     """Runs the main chat loop, taking user questions and printing AI-generated travel answers."""
     print("\n🌏 Hybrid Travel Assistant for Vietnam (Powered by Gemini + Neo4j + Pinecone)")
-    print("=" * 65)
+    print("=" * 68)
     print("Ask me about Vietnamese destinations, culture, food, and travel tips!")
     print("Type 'exit' or 'quit' to end the conversation.\n")
 

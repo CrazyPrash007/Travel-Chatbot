@@ -2,43 +2,28 @@ import json
 import re
 from typing import List
 from flask import Flask, render_template, request, jsonify, send_file
-import google.generativeai as genai
+from google import genai
 from pinecone import Pinecone, ServerlessSpec
 from neo4j import GraphDatabase
 import config
 
 app = Flask(__name__)
 
-EMBED_MODEL = "models/text-embedding-004"
-CHAT_MODEL = "gemini-1.5-flash"
+EMBED_MODEL = "gemini-embedding-001"
+CHAT_MODEL = "gemini-3.5-flash-lite"
 TOP_K = 5
 INDEX_NAME = config.PINECONE_INDEX_NAME
 
 # Initialize Gemini
 try:
-    genai.configure(api_key=config.GEMINI_API_KEY)
-    gemini_model = genai.GenerativeModel(
-        model_name=CHAT_MODEL,
-        system_instruction=(
-            "You are an energetic, fun Vietnam travel assistant! "
-            "Use the provided semantic search matches and graph knowledge facts to give an inspiring, "
-            "helpful, structured travel recommendation. Cite place names and node IDs."
-        )
-    )
+    gemini_client = genai.Client(api_key=config.GEMINI_API_KEY)
 except Exception as e:
-    gemini_model = None
+    gemini_client = None
     print(f"⚠️ Gemini init error: {e}")
 
 # Initialize Pinecone
 try:
     pc = Pinecone(api_key=config.PINECONE_API_KEY)
-    if INDEX_NAME not in pc.list_indexes().names():
-        pc.create_index(
-            name=INDEX_NAME,
-            dimension=config.PINECONE_VECTOR_DIM,
-            metric="cosine",
-            spec=ServerlessSpec(cloud="aws", region="us-east-1")
-        )
     pinecone_index = pc.Index(INDEX_NAME)
 except Exception as e:
     pinecone_index = None
@@ -54,12 +39,14 @@ except Exception as e:
 
 def embed_text(text: str) -> List[float]:
     """Generates a 768-dim Gemini embedding for the user search query."""
-    res = genai.embed_content(
+    if not gemini_client:
+        raise RuntimeError("Gemini client is not initialized.")
+    res = gemini_client.models.embed_content(
         model=EMBED_MODEL,
-        content=text,
-        task_type="retrieval_query"
+        contents=text,
+        config={"output_dimensionality": config.PINECONE_VECTOR_DIM}
     )
-    return res["embedding"]
+    return res.embeddings[0].values
 
 
 def pinecone_query(query_text: str, top_k=TOP_K):
@@ -112,11 +99,12 @@ def fetch_graph_context(node_ids: List[str]):
 
 
 def generate_llm_answer(user_query, matches, graph_facts):
-    """Generates an answer using Google Gemini 1.5 Flash."""
+    """Generates an answer using Google Gemini Flash."""
     vec_snips = [f"- {m['name']} ({m['city']}, {m['type']}, relevance: {m['score']}%)" for m in matches]
     graph_snips = [f"- ({f['source']}) -[{f['rel']}]-> ({f['target_name']})" for f in graph_facts[:15]]
 
     content = (
+        f"You are an energetic, fun Vietnam travel assistant! Use the following retrieved facts to answer the user.\n\n"
         f"User Query: {user_query}\n\n"
         f"Top Semantic Matches (from Pinecone Vector DB):\n" + "\n".join(vec_snips) + "\n\n"
         f"Knowledge Graph Relationships (from Neo4j):\n" + "\n".join(graph_snips) + "\n\n"
@@ -124,14 +112,17 @@ def generate_llm_answer(user_query, matches, graph_facts):
         "Recommend top destinations, key activities, and practical travel tips."
     )
 
-    if gemini_model:
+    if gemini_client:
         try:
-            resp = gemini_model.generate_content(content)
+            resp = gemini_client.models.generate_content(
+                model=CHAT_MODEL,
+                contents=content
+            )
             return resp.text
         except Exception as e:
             print(f"⚠️ Gemini generate error: {e}")
 
-    # Fallback if API key is not yet set
+    # Fallback synthesis if rate limited
     destinations = [f"**{m['name']}** ({m['city']})" for m in matches[:4]]
     dest_list = ", ".join(destinations) if destinations else "Vietnam's top destinations"
     
