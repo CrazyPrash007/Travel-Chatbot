@@ -234,8 +234,18 @@ def generate_html(nodes_raw, rels_raw, output_path="neo4j_viz.html"):
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;700;800&display=swap" rel="stylesheet">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.js"></script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" />
+  <script src="/lib/vis-9.1.2/vis-network.min.js"></script>
+  <link rel="stylesheet" href="/lib/vis-9.1.2/vis-network.css" />
+  <script>
+    if (typeof vis === 'undefined') {{
+      document.write('<script src="lib/vis-9.1.2/vis-network.min.js"><\\/script>');
+    }}
+  </script>
+  <script>
+    if (typeof vis === 'undefined') {{
+      document.write('<script src="https://unpkg.com/vis-network@9.1.2/standalone/umd/vis-network.min.js"><\\/script>');
+    }}
+  </script>
 
   <style>
     :root {{
