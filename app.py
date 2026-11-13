@@ -98,18 +98,51 @@ def fetch_graph_context(node_ids: List[str]):
     return facts
 
 
+def clean_ai_identifiers(text: str) -> str:
+    """Removes unicode dashes, smart quotes, and robotic AI filler text."""
+    if not text:
+        return ""
+    # Unicode dashes (em-dash, en-dash, horizontal bar) to standard hyphen
+    for ch in ["\u2014", "\u2013", "\u2012", "\u2015"]:
+        text = text.replace(ch, " - ")
+    # Smart quotes to standard ASCII quotes
+    for ch in ["\u2018", "\u2019"]:
+        text = text.replace(ch, "'")
+    for ch in ["\u201c", "\u201d"]:
+        text = text.replace(ch, '"')
+    # Ellipsis
+    text = text.replace("\u2026", "...")
+    # Normalize multiple hyphens or spaces
+    import re
+    text = re.sub(r' +(-)', r' \1', text)
+    # Strip robotic AI conversational greetings
+    ai_greetings = [
+        r'^(?:Hey there!|Hello!|Hi there!|Greetings!|Sure thing!|Certainly!|Sure!|As an AI language model,|As an AI travel assistant,|As an AI,)\s*',
+        r'^(?:Here is a recommended itinerary|Here are some recommendations|Here are the top recommendations)[^\n]*:\s*'
+    ]
+    for pat in ai_greetings:
+        text = re.sub(pat, '', text, flags=re.IGNORECASE)
+    # Strip robotic AI sign-offs
+    ai_signoffs = [
+        r'\n*(?:Hope this helps!|Let me know if you need more information!|Feel free to ask if you have more questions!|Safe travels and enjoy your trip!|Safe travels!)\s*$'
+    ]
+    for pat in ai_signoffs:
+        text = re.sub(pat, '', text, flags=re.IGNORECASE)
+    return text.strip()
+
+
 def generate_llm_answer(user_query, matches, graph_facts):
     """Generates an answer using Google Gemini Flash."""
     vec_snips = [f"- {m['name']} ({m['city']}, {m['type']}, relevance: {m['score']}%)" for m in matches]
     graph_snips = [f"- ({f['source']}) -[{f['rel']}]-> ({f['target_name']})" for f in graph_facts[:15]]
 
     content = (
-        f"You are an energetic, fun Vietnam travel assistant! Use the following retrieved facts to answer the user.\n\n"
+        f"You are a knowledgeable travel guide for Vietnam. Use the retrieved context below to provide a natural, structured recommendation.\n"
+        f"Style requirements: Do not use em-dashes or en-dashes; use standard hyphens or commas instead. Avoid robotic AI conversational filler (like 'Hey there!', 'As an AI', 'Sure thing!'). Begin directly with practical suggestions, highlighting key destinations and tips.\n\n"
         f"User Query: {user_query}\n\n"
         f"Top Semantic Matches (from Pinecone Vector DB):\n" + "\n".join(vec_snips) + "\n\n"
         f"Knowledge Graph Relationships (from Neo4j):\n" + "\n".join(graph_snips) + "\n\n"
-        "Provide an inspiring, structured travel recommendation for the user. "
-        "Recommend top destinations, key activities, and practical travel tips."
+        "Provide a clear travel recommendation with destinations, activities, and travel advice."
     )
 
     if gemini_client:
@@ -118,7 +151,7 @@ def generate_llm_answer(user_query, matches, graph_facts):
                 model=CHAT_MODEL,
                 contents=content
             )
-            return resp.text
+            return clean_ai_identifiers(resp.text)
         except Exception as e:
             print(f"⚠️ Gemini generate error: {e}")
 

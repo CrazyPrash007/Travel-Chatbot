@@ -112,7 +112,7 @@ def build_prompt(user_query, pinecone_matches, graph_facts):
             city = meta.get("city") or meta.get("region") or "Unknown location"
             desc = (meta.get("description") or meta.get("semantic_text") or "").strip()
             desc_snip = (desc[:120] + "...") if desc and len(desc) > 120 else desc
-            display_name = f"{city} — {desc_snip}" if desc_snip else city
+            display_name = f"{city} - {desc_snip}" if desc_snip else city
         else:
             display_name = raw_name
 
@@ -127,7 +127,8 @@ def build_prompt(user_query, pinecone_matches, graph_facts):
     ]
 
     prompt = (
-        f"You are a helpful travel assistant for Vietnam. Answer the user concisely using the context below.\n\n"
+        f"You are a knowledgeable travel guide for Vietnam. Answer the user directly and concisely using the context below. "
+        f"Do not use em-dashes or en-dashes; use standard hyphens or commas instead. Avoid AI filler greetings or disclaimers.\n\n"
         f"User query: {user_query}\n\n"
         "Top semantic matches (from Pinecone Vector DB):\n" + "\n".join(vec_context[:10]) + "\n\n"
         "Knowledge Graph facts (from Neo4j):\n" + "\n".join(graph_context[:20]) + "\n\n"
@@ -136,13 +137,46 @@ def build_prompt(user_query, pinecone_matches, graph_facts):
     return prompt
 
 
+def clean_ai_identifiers(text: str) -> str:
+    """Removes unicode dashes, smart quotes, and robotic AI filler text."""
+    if not text:
+        return ""
+    # Unicode dashes (em-dash, en-dash, horizontal bar) to standard hyphen
+    for ch in ["\u2014", "\u2013", "\u2012", "\u2015"]:
+        text = text.replace(ch, " - ")
+    # Smart quotes to standard ASCII quotes
+    for ch in ["\u2018", "\u2019"]:
+        text = text.replace(ch, "'")
+    for ch in ["\u201c", "\u201d"]:
+        text = text.replace(ch, '"')
+    # Ellipsis
+    text = text.replace("\u2026", "...")
+    # Normalize multiple hyphens or spaces
+    import re
+    text = re.sub(r' +(-)', r' \1', text)
+    # Strip robotic AI conversational greetings
+    ai_greetings = [
+        r'^(?:Hey there!|Hello!|Hi there!|Greetings!|Sure thing!|Certainly!|Sure!|As an AI language model,|As an AI travel assistant,|As an AI,)\s*',
+        r'^(?:Here is a recommended itinerary|Here are some recommendations|Here are the top recommendations)[^\n]*:\s*'
+    ]
+    for pat in ai_greetings:
+        text = re.sub(pat, '', text, flags=re.IGNORECASE)
+    # Strip robotic AI sign-offs
+    ai_signoffs = [
+        r'\n*(?:Hope this helps!|Let me know if you need more information!|Feel free to ask if you have more questions!|Safe travels and enjoy your trip!|Safe travels!)\s*$'
+    ]
+    for pat in ai_signoffs:
+        text = re.sub(pat, '', text, flags=re.IGNORECASE)
+    return text.strip()
+
+
 def call_chat(prompt_text):
     """Sends prompt to Gemini chat model and returns the response text."""
     resp = gemini_client.models.generate_content(
         model=CHAT_MODEL,
         contents=prompt_text
     )
-    return resp.text
+    return clean_ai_identifiers(resp.text)
 
 
 def interactive_chat():

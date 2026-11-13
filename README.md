@@ -5,9 +5,9 @@ A sophisticated AI-powered travel assistant for Vietnam that combines vector sim
 ## 🎯 Overview
 
 This system creates an intelligent chatbot that answers questions about Vietnam travel destinations by:
-- **Semantic Search**: Using Pinecone vector database with Google Gemini embeddings (`text-embedding-004`) for contextual similarity
+- **Semantic Search**: Using Pinecone vector database with Google Gemini embeddings (`gemini-embedding-001`) for contextual similarity
 - **Graph Relationships**: Leveraging Neo4j knowledge graph to understand connections between cities, attractions, and activities
-- **AI Responses**: Generating natural language recommendations using Google Gemini (`gemini-1.5-flash`)
+- **AI Responses**: Generating natural language recommendations using Google Gemini (`gemini-3.5-flash-lite`)
 - **Interactive Visualization**: Cartoon-style responsive Web UI + interactive PyVis network graphs
 
 ## 🏗️ Architecture
@@ -60,7 +60,7 @@ GEMINI_API_KEY = "your_gemini_api_key"
 PINECONE_API_KEY = "your_pinecone_api_key"
 PINECONE_ENV = "us-east-1"
 PINECONE_INDEX_NAME = "vietnam-travel"
-PINECONE_VECTOR_DIM = 768  # Gemini text-embedding-004 output dimension
+PINECONE_VECTOR_DIM = 768  # Gemini gemini-embedding-001 output dimension
 ```
 
 ### 3. Database Setup (One-time)

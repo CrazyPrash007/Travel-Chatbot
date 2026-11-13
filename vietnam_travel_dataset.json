@@ -4,7 +4,7 @@
     "type": "City",
     "name": "Hanoi",
     "region": "Northern Vietnam",
-    "description": "Hanoi is located in Northern Vietnam. It’s known for its culture, food, heritage experiences, combining local culture, food, and history. Travelers often visit for authentic Vietnamese experiences, from exploring markets and temples to trying street food and scenic excursions.",
+    "description": "Hanoi is located in Northern Vietnam. It's known for its culture, food, heritage experiences, combining local culture, food, and history. Travelers often visit for authentic Vietnamese experiences, from exploring markets and temples to trying street food and scenic excursions.",
     "best_time_to_visit": "February to May",
     "tags": [
       "culture",
@@ -28,7 +28,7 @@
     "type": "City",
     "name": "Ha Long Bay",
     "region": "Northern Vietnam",
-    "description": "Ha Long Bay is located in Northern Vietnam. It’s known for its beach, cruise, nature experiences, combining local culture, food, and history. Travelers often visit for authentic Vietnamese experiences, from exploring markets and temples to trying street food and scenic excursions.",
+    "description": "Ha Long Bay is located in Northern Vietnam. It's known for its beach, cruise, nature experiences, combining local culture, food, and history. Travelers often visit for authentic Vietnamese experiences, from exploring markets and temples to trying street food and scenic excursions.",
     "best_time_to_visit": "February to May",
     "tags": [
       "beach",
@@ -52,7 +52,7 @@
     "type": "City",
     "name": "Sapa",
     "region": "Northern Vietnam",
-    "description": "Sapa is located in Northern Vietnam. It’s known for its mountain, trekking, ethnic experiences, combining local culture, food, and history. Travelers often visit for authentic Vietnamese experiences, from exploring markets and temples to trying street food and scenic excursions.",
+    "description": "Sapa is located in Northern Vietnam. It's known for its mountain, trekking, ethnic experiences, combining local culture, food, and history. Travelers often visit for authentic Vietnamese experiences, from exploring markets and temples to trying street food and scenic excursions.",
     "best_time_to_visit": "October to April",
     "tags": [
       "mountain",
@@ -76,7 +76,7 @@
     "type": "City",
     "name": "Hue",
     "region": "Central Vietnam",
-    "description": "Hue is located in Central Vietnam. It’s known for its imperial, history, architecture experiences, combining local culture, food, and history. Travelers often visit for authentic Vietnamese experiences, from exploring markets and temples to trying street food and scenic excursions.",
+    "description": "Hue is located in Central Vietnam. It's known for its imperial, history, architecture experiences, combining local culture, food, and history. Travelers often visit for authentic Vietnamese experiences, from exploring markets and temples to trying street food and scenic excursions.",
     "best_time_to_visit": "October to April",
     "tags": [
       "imperial",
@@ -100,7 +100,7 @@
     "type": "City",
     "name": "Hoi An",
     "region": "Central Vietnam",
-    "description": "Hoi An is located in Central Vietnam. It’s known for its lanterns, romantic, heritage experiences, combining local culture, food, and history. Travelers often visit for authentic Vietnamese experiences, from exploring markets and temples to trying street food and scenic excursions.",
+    "description": "Hoi An is located in Central Vietnam. It's known for its lanterns, romantic, heritage experiences, combining local culture, food, and history. Travelers often visit for authentic Vietnamese experiences, from exploring markets and temples to trying street food and scenic excursions.",
     "best_time_to_visit": "October to April",
     "tags": [
       "lanterns",
@@ -124,7 +124,7 @@
     "type": "City",
     "name": "Da Nang",
     "region": "Central Vietnam",
-    "description": "Da Nang is located in Central Vietnam. It’s known for its beach, modern, adventure experiences, combining local culture, food, and history. Travelers often visit for authentic Vietnamese experiences, from exploring markets and temples to trying street food and scenic excursions.",
+    "description": "Da Nang is located in Central Vietnam. It's known for its beach, modern, adventure experiences, combining local culture, food, and history. Travelers often visit for authentic Vietnamese experiences, from exploring markets and temples to trying street food and scenic excursions.",
     "best_time_to_visit": "Year-round",
     "tags": [
       "beach",
@@ -148,7 +148,7 @@
     "type": "City",
     "name": "Nha Trang",
     "region": "Southern Vietnam",
-    "description": "Nha Trang is located in Southern Vietnam. It’s known for its diving, resort, beach experiences, combining local culture, food, and history. Travelers often visit for authentic Vietnamese experiences, from exploring markets and temples to trying street food and scenic excursions.",
+    "description": "Nha Trang is located in Southern Vietnam. It's known for its diving, resort, beach experiences, combining local culture, food, and history. Travelers often visit for authentic Vietnamese experiences, from exploring markets and temples to trying street food and scenic excursions.",
     "best_time_to_visit": "Year-round",
     "tags": [
       "diving",
@@ -172,7 +172,7 @@
     "type": "City",
     "name": "Da Lat",
     "region": "Southern Vietnam",
-    "description": "Da Lat is located in Southern Vietnam. It’s known for its mountain, romantic, flowers experiences, combining local culture, food, and history. Travelers often visit for authentic Vietnamese experiences, from exploring markets and temples to trying street food and scenic excursions.",
+    "description": "Da Lat is located in Southern Vietnam. It's known for its mountain, romantic, flowers experiences, combining local culture, food, and history. Travelers often visit for authentic Vietnamese experiences, from exploring markets and temples to trying street food and scenic excursions.",
     "best_time_to_visit": "February to May",
     "tags": [
       "mountain",
@@ -196,7 +196,7 @@
     "type": "City",
     "name": "Ho Chi Minh City",
     "region": "Southern Vietnam",
-    "description": "Ho Chi Minh City is located in Southern Vietnam. It’s known for its urban, history, markets experiences, combining local culture, food, and history. Travelers often visit for authentic Vietnamese experiences, from exploring markets and temples to trying street food and scenic excursions.",
+    "description": "Ho Chi Minh City is located in Southern Vietnam. It's known for its urban, history, markets experiences, combining local culture, food, and history. Travelers often visit for authentic Vietnamese experiences, from exploring markets and temples to trying street food and scenic excursions.",
     "best_time_to_visit": "February to May",
     "tags": [
       "urban",
@@ -220,7 +220,7 @@
     "type": "City",
     "name": "Mekong Delta",
     "region": "Southern Vietnam",
-    "description": "Mekong Delta is located in Southern Vietnam. It’s known for its rural, river, floating_markets experiences, combining local culture, food, and history. Travelers often visit for authentic Vietnamese experiences, from exploring markets and temples to trying street food and scenic excursions.",
+    "description": "Mekong Delta is located in Southern Vietnam. It's known for its rural, river, floating_markets experiences, combining local culture, food, and history. Travelers often visit for authentic Vietnamese experiences, from exploring markets and temples to trying street food and scenic excursions.",
     "best_time_to_visit": "October to April",
     "tags": [
       "rural",
