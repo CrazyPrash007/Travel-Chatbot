@@ -707,35 +707,167 @@ def generate_html(nodes_raw, rels_raw, output_path="neo4j_viz.html"):
       background: #FFE600;
     }}
 
-    /* LOADING BANNER */
-    #loadingNotice {{
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: var(--yellow);
-      border: 4px solid var(--black);
-      border-radius: 24px;
-      padding: 24px 36px;
-      box-shadow: var(--shadow-lg);
-      font-size: 1.4rem;
-      font-weight: 700;
-      z-index: 1000;
-      text-align: center;
-      animation: bounce 1s infinite alternate;
+    /* CARTOON LOADING MODAL WITH PERCENTAGE */
+    #loadingScreen {{
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(255, 253, 245, 0.94);
+      background-image: radial-gradient(var(--black) 1.5px, transparent 1.5px);
+      background-size: 24px 24px;
+      backdrop-filter: blur(6px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      transition: opacity 0.35s ease, visibility 0.35s ease;
     }}
 
-    @keyframes bounce {{
-      0% {{ transform: translate(-50%, -50%) scale(1); }}
-      100% {{ transform: translate(-50%, -55%) scale(1.03); }}
+    .loading-card {{
+      background: var(--yellow);
+      border: 4px solid var(--black);
+      border-radius: 28px;
+      padding: 32px 36px;
+      box-shadow: var(--shadow-lg);
+      text-align: center;
+      max-width: 460px;
+      width: 90%;
+      position: relative;
+      animation: popCard 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }}
+
+    @keyframes popCard {{
+      0% {{ transform: scale(0.85); opacity: 0; }}
+      100% {{ transform: scale(1); opacity: 1; }}
+    }}
+
+    .loading-icon {{
+      font-size: 3.2rem;
+      margin-bottom: 8px;
+      display: inline-block;
+      animation: wiggle 1s ease-in-out infinite;
+    }}
+
+    @keyframes wiggle {{
+      0%, 100% {{ transform: rotate(0deg) scale(1); }}
+      25% {{ transform: rotate(-8deg) scale(1.05); }}
+      75% {{ transform: rotate(8deg) scale(1.05); }}
+    }}
+
+    .loading-title {{
+      font-size: 1.55rem;
+      font-weight: 800;
+      letter-spacing: -0.4px;
+      margin-bottom: 4px;
+    }}
+
+    .loading-estimate {{
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 18px;
+    }}
+
+    .progress-meta {{
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }}
+
+    .progress-label {{
+      font-size: 0.9rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }}
+
+    .progress-percent {{
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: var(--black);
+      background: #FFFFFF;
+      border: 2px solid var(--black);
+      border-radius: 10px;
+      padding: 2px 10px;
+      box-shadow: var(--shadow-sm);
+    }}
+
+    .progress-track {{
+      background: #FFFFFF;
+      border: 3.5px solid var(--black);
+      border-radius: 999px;
+      height: 28px;
+      width: 100%;
+      overflow: hidden;
+      box-shadow: inset 2px 2px 0px rgba(0,0,0,0.12);
+      position: relative;
+      margin-bottom: 14px;
+    }}
+
+    .progress-fill {{
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--pink), var(--green));
+      background-size: 32px 32px;
+      background-image: linear-gradient(
+        45deg,
+        rgba(255, 255, 255, 0.3) 25%,
+        transparent 25%,
+        transparent 50%,
+        rgba(255, 255, 255, 0.3) 50%,
+        rgba(255, 255, 255, 0.3) 75%,
+        transparent 75%,
+        transparent
+      );
+      animation: candyStripes 1s linear infinite;
+      border-radius: 999px;
+      transition: width 0.12s ease-out;
+    }}
+
+    @keyframes candyStripes {{
+      0% {{ background-position: 0 0; }}
+      100% {{ background-position: 32px 0; }}
+    }}
+
+    .loading-status-pill {{
+      display: inline-block;
+      background: #FFFFFF;
+      border: 2px solid var(--black);
+      border-radius: 12px;
+      padding: 6px 14px;
+      font-size: 0.88rem;
+      font-weight: 700;
+      box-shadow: var(--shadow-sm);
+      color: #18181b;
     }}
   </style>
 </head>
 <body>
 
-  <!-- LOADING OVERLAY -->
-  <div id="loadingNotice">
-    <span>🛵 Spawning 360-Node Travel Galaxy...</span>
+  <!-- CARTOON LOADING OVERLAY WITH REALTIME PERCENTAGE -->
+  <div id="loadingScreen">
+    <div class="loading-card">
+      <div class="loading-icon">🛵💨</div>
+      <h2 class="loading-title">Spawning Travel Galaxy</h2>
+      <div class="loading-estimate">⏱️ Estimated load time: ~2 seconds</div>
+
+      <div class="progress-meta">
+        <span class="progress-label">Graph Physics Simulation</span>
+        <span class="progress-percent" id="progressPercent">0%</span>
+      </div>
+
+      <div class="progress-track">
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
+
+      <div class="loading-status-pill" id="loadingStatus">
+        Initializing 360 destinations and 370 connections...
+      </div>
+    </div>
   </div>
 
   <!-- NETWORK CANVAS -->
@@ -917,8 +1049,8 @@ def generate_html(nodes_raw, rels_raw, output_path="neo4j_viz.html"):
         }},
         stabilization: {{
           enabled: true,
-          iterations: 150,
-          updateInterval: 25
+          iterations: 160,
+          updateInterval: 4
         }}
       }},
       interaction: {{
@@ -932,17 +1064,57 @@ def generate_html(nodes_raw, rels_raw, output_path="neo4j_viz.html"):
 
     const network = new vis.Network(container, data, options);
 
-    // Remove loading overlay once stabilized
-    network.once('stabilizationIterationsDone', function () {{
-      const notice = document.getElementById('loadingNotice');
-      if (notice) notice.style.display = 'none';
+    // Realtime Loading Progress Bar & Percentage
+    const progressFill = document.getElementById('progressFill');
+    const progressPercent = document.getElementById('progressPercent');
+    const loadingStatus = document.getElementById('loadingStatus');
+    const loadingScreen = document.getElementById('loadingScreen');
+
+    const statusSteps = [
+      {{ max: 25, text: "🛵 Initializing 360 travel locations..." }},
+      {{ max: 55, text: "🗺️ Mapping city hubs and inter-city routes..." }},
+      {{ max: 80, text: "⚡ Simulating spring physics and gravity forces..." }},
+      {{ max: 99, text: "🎨 Styling cartoon nodes and drop shadows..." }},
+      {{ max: 100, text: "🚀 Ready! Launching Travel Explorer..." }}
+    ];
+
+    let isDismissed = false;
+
+    function renderProgress(p) {{
+      if (isDismissed) return;
+      const val = Math.min(Math.max(p, 0), 100);
+      progressFill.style.width = val + '%';
+      progressPercent.textContent = val + '%';
+
+      const step = statusSteps.find(s => val <= s.max) || statusSteps[statusSteps.length - 1];
+      loadingStatus.textContent = step.text;
+    }}
+
+    network.on('stabilizationProgress', function (params) {{
+      const p = Math.round((params.iterations / params.total) * 100);
+      renderProgress(p);
     }});
 
-    // Safety timeout to hide loading notice
+    function dismissLoading() {{
+      if (isDismissed) return;
+      isDismissed = true;
+      renderProgress(100);
+      setTimeout(() => {{
+        loadingScreen.style.opacity = '0';
+        setTimeout(() => {{
+          loadingScreen.style.display = 'none';
+        }}, 350);
+      }}, 300);
+    }}
+
+    network.once('stabilizationIterationsDone', function () {{
+      dismissLoading();
+    }});
+
+    // Safety fallback so screen never hangs
     setTimeout(() => {{
-      const notice = document.getElementById('loadingNotice');
-      if (notice) notice.style.display = 'none';
-    }}, 2000);
+      dismissLoading();
+    }}, 3500);
 
     // Map for fast node lookup
     const nodeMap = new Map();
