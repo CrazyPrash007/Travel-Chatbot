@@ -117,6 +117,71 @@
     .badge.green { background: var(--green); }
     .badge.purple { background: var(--purple); color: #fff; }
 
+    /* DISTINGUISHED VIEW GRAPH CTA BUTTON */
+    .btn-view-graph {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: linear-gradient(135deg, #9333EA 0%, #7C3AED 100%);
+      color: #FFFFFF;
+      font-family: inherit;
+      font-size: 1.05rem;
+      font-weight: 800;
+      padding: 12px 22px;
+      border: 4px solid var(--black);
+      border-radius: 18px;
+      box-shadow: 6px 6px 0px var(--black);
+      text-decoration: none;
+      cursor: pointer;
+      position: relative;
+      transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      animation: graph-float 3s ease-in-out infinite;
+    }
+
+    @keyframes graph-float {
+      0%, 100% {
+        transform: translateY(0px) rotate(0deg);
+      }
+      50% {
+        transform: translateY(-4px) rotate(-1deg);
+      }
+    }
+
+    .btn-view-graph:hover {
+      background: linear-gradient(135deg, #A855F7 0%, #9333EA 100%);
+      color: #FFFFFF;
+      transform: translate(-3px, -3px) scale(1.03) rotate(-1.5deg);
+      box-shadow: 9px 9px 0px var(--black);
+    }
+
+    .btn-view-graph:active {
+      transform: translate(2px, 2px) scale(0.98);
+      box-shadow: 2px 2px 0px var(--black);
+    }
+
+    .btn-view-graph .btn-tag {
+      background: var(--yellow);
+      color: var(--black);
+      font-size: 0.72rem;
+      font-weight: 800;
+      padding: 3px 8px;
+      border: 2px solid var(--black);
+      border-radius: 999px;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      box-shadow: 1.5px 1.5px 0px var(--black);
+    }
+
+    .btn-view-graph .btn-arrow {
+      font-size: 1.2rem;
+      transition: transform 0.2s ease;
+      display: inline-block;
+    }
+
+    .btn-view-graph:hover .btn-arrow {
+      transform: translateX(4px) scale(1.15);
+    }
+
     /* SEARCH SECTION */
     .search-card {
       background: var(--card-bg);
@@ -451,12 +516,18 @@
       <div>
         <h1 class="brand-title">🌴 Vietnam Travel AI</h1>
         <p class="brand-subtitle">Interactive Hybrid RAG with Vector Search & Knowledge Graphs</p>
+        <div class="badge-bar" style="margin-top: 10px;">
+          <span class="badge green">🟢 Pinecone (360 Vectors)</span>
+          <span class="badge cyan">🟢 Neo4j Graph (360 Nodes)</span>
+          <span class="badge pink">🟢 Gemini AI</span>
+        </div>
       </div>
-      <div class="badge-bar">
-        <span class="badge green">🟢 Pinecone (360 Vectors)</span>
-        <span class="badge cyan">🟢 Neo4j Graph (360 Nodes)</span>
-        <span class="badge pink">🟢 Gemini AI</span>
-        <a href="/graph-viz" target="_blank" class="badge purple" style="text-decoration:none;">🕸️ View Graph</a>
+      <div>
+        <a href="/graph-viz" target="_blank" class="btn-view-graph">
+          <span class="btn-tag">✨ 3D GALAXY</span>
+          <span>🕸️ EXPLORE KNOWLEDGE GRAPH</span>
+          <span class="btn-arrow">➔</span>
+        </a>
       </div>
     </header>
 
@@ -522,7 +593,9 @@
         <div class="card" style="background: #FCFAFF;">
           <div class="card-header">
             <div class="card-title">🕸️ Graph Relations</div>
-            <span class="badge purple">Neo4j</span>
+            <a href="/graph-viz" target="_blank" class="badge purple" style="text-decoration:none; cursor:pointer;" title="Open full 360-node interactive graph in new tab">
+              🌐 Full 360-Node Graph ↗
+            </a>
           </div>
           <div class="graph-list" id="graphList"></div>
         </div>
@@ -535,6 +608,16 @@
   </div>
 
   <script>
+    // Auto-fill and submit query if ?q= URL parameter is provided
+    window.addEventListener('DOMContentLoaded', () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const q = urlParams.get('q');
+      if (q) {
+        document.getElementById('queryInput').value = q;
+        document.getElementById('searchForm').dispatchEvent(new Event('submit'));
+      }
+    });
+
     function fillQuery(text) {
       document.getElementById('queryInput').value = text;
       document.getElementById('searchForm').dispatchEvent(new Event('submit'));
