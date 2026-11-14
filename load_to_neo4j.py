@@ -1,12 +1,22 @@
+import os
 import json
 from neo4j import GraphDatabase
 from tqdm import tqdm
-import config
+
+try:
+    import config
+    NEO4J_URI = getattr(config, "NEO4J_URI", os.getenv("NEO4J_URI", ""))
+    NEO4J_USER = getattr(config, "NEO4J_USER", os.getenv("NEO4J_USER", "neo4j"))
+    NEO4J_PASSWORD = getattr(config, "NEO4J_PASSWORD", os.getenv("NEO4J_PASSWORD", ""))
+except ImportError:
+    NEO4J_URI = os.getenv("NEO4J_URI", "")
+    NEO4J_USER = os.getenv("NEO4J_USER", "neo4j")
+    NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "")
 
 DATA_FILE = "vietnam_travel_dataset.json"
 
 try:
-    driver = GraphDatabase.driver(config.NEO4J_URI, auth=(config.NEO4J_USER, config.NEO4J_PASSWORD))
+    driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD))
     with driver.session() as session:
         session.run("RETURN 1")
     print("✅ Neo4j connection established")

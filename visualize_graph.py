@@ -4,9 +4,19 @@ Fetches nodes & relationships from Neo4j Aura and generates an interactive,
 cartoon-styled, neo-brutalist HTML visualization (neo4j_viz.html).
 """
 
+import os
 import json
 from neo4j import GraphDatabase
-import config
+
+try:
+    import config
+    NEO4J_URI = getattr(config, "NEO4J_URI", os.getenv("NEO4J_URI", ""))
+    NEO4J_USER = getattr(config, "NEO4J_USER", os.getenv("NEO4J_USER", "neo4j"))
+    NEO4J_PASSWORD = getattr(config, "NEO4J_PASSWORD", os.getenv("NEO4J_PASSWORD", ""))
+except ImportError:
+    NEO4J_URI = os.getenv("NEO4J_URI", "")
+    NEO4J_USER = os.getenv("NEO4J_USER", "neo4j")
+    NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "")
 
 def clean_text(val):
     if not val:
@@ -26,7 +36,7 @@ def clean_text(val):
 
 def fetch_graph():
     print("🔌 Connecting to Neo4j to fetch graph data...")
-    driver = GraphDatabase.driver(config.NEO4J_URI, auth=(config.NEO4J_USER, config.NEO4J_PASSWORD))
+    driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD))
     
     with driver.session() as session:
         nodes_res = session.run("""

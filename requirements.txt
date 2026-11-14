@@ -1,7 +1,8 @@
+flask
+gunicorn
+google-genai
 neo4j
-google-generativeai
 pinecone
 pyvis
 networkx
 tqdm
-flask

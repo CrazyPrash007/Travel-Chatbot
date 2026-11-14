@@ -1,3 +1,4 @@
+import os
 import json
 import re
 from typing import List
@@ -5,25 +6,42 @@ from flask import Flask, render_template, request, jsonify, send_file
 from google import genai
 from pinecone import Pinecone, ServerlessSpec
 from neo4j import GraphDatabase
-import config
+
+try:
+    import config
+    NEO4J_URI = getattr(config, "NEO4J_URI", os.getenv("NEO4J_URI", ""))
+    NEO4J_USER = getattr(config, "NEO4J_USER", os.getenv("NEO4J_USER", "neo4j"))
+    NEO4J_PASSWORD = getattr(config, "NEO4J_PASSWORD", os.getenv("NEO4J_PASSWORD", ""))
+    GEMINI_API_KEY = getattr(config, "GEMINI_API_KEY", os.getenv("GEMINI_API_KEY", ""))
+    PINECONE_API_KEY = getattr(config, "PINECONE_API_KEY", os.getenv("PINECONE_API_KEY", ""))
+    PINECONE_INDEX_NAME = getattr(config, "PINECONE_INDEX_NAME", os.getenv("PINECONE_INDEX_NAME", "vietnam-travel"))
+    PINECONE_VECTOR_DIM = int(getattr(config, "PINECONE_VECTOR_DIM", os.getenv("PINECONE_VECTOR_DIM", 768)))
+except ImportError:
+    NEO4J_URI = os.getenv("NEO4J_URI", "")
+    NEO4J_USER = os.getenv("NEO4J_USER", "neo4j")
+    NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "")
+    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+    PINECONE_API_KEY = os.getenv("PINECONE_API_KEY", "")
+    PINECONE_INDEX_NAME = os.getenv("PINECONE_INDEX_NAME", "vietnam-travel")
+    PINECONE_VECTOR_DIM = int(os.getenv("PINECONE_VECTOR_DIM", 768))
 
 app = Flask(__name__)
 
 EMBED_MODEL = "gemini-embedding-001"
 CHAT_MODEL = "gemini-3.5-flash-lite"
 TOP_K = 5
-INDEX_NAME = config.PINECONE_INDEX_NAME
+INDEX_NAME = PINECONE_INDEX_NAME
 
 # Initialize Gemini
 try:
-    gemini_client = genai.Client(api_key=config.GEMINI_API_KEY)
+    gemini_client = genai.Client(api_key=GEMINI_API_KEY)
 except Exception as e:
     gemini_client = None
     print(f"⚠️ Gemini init error: {e}")
 
 # Initialize Pinecone
 try:
-    pc = Pinecone(api_key=config.PINECONE_API_KEY)
+    pc = Pinecone(api_key=PINECONE_API_KEY)
     pinecone_index = pc.Index(INDEX_NAME)
 except Exception as e:
     pinecone_index = None
@@ -31,7 +49,7 @@ except Exception as e:
 
 # Initialize Neo4j
 try:
-    neo4j_driver = GraphDatabase.driver(config.NEO4J_URI, auth=(config.NEO4J_USER, config.NEO4J_PASSWORD))
+    neo4j_driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD))
 except Exception as e:
     neo4j_driver = None
     print(f"⚠️ Neo4j driver init error: {e}")
@@ -44,7 +62,7 @@ def embed_text(text: str) -> List[float]:
     res = gemini_client.models.embed_content(
         model=EMBED_MODEL,
         contents=text,
-        config={"output_dimensionality": config.PINECONE_VECTOR_DIM}
+        config={"output_dimensionality": PINECONE_VECTOR_DIM}
     )
     return res.embeddings[0].values
 
@@ -217,5 +235,6 @@ def chat():
 
 
 if __name__ == "__main__":
-    print("🚀 Starting Vietnam Travel Chatbot on http://localhost:5000")
-    app.run(host="0.0.0.0", port=5000, debug=False)
+    port = int(os.getenv("PORT", 5000))
+    print(f"🚀 Starting Vietnam Travel Chatbot on port {port}")
+    app.run(host="0.0.0.0", port=port, debug=False)

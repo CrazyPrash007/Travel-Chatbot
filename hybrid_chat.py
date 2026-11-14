@@ -1,25 +1,43 @@
+import os
 import json
 import re
 from typing import List
 from google import genai
 from pinecone import Pinecone, ServerlessSpec
 from neo4j import GraphDatabase
-import config
+
+try:
+    import config
+    NEO4J_URI = getattr(config, "NEO4J_URI", os.getenv("NEO4J_URI", ""))
+    NEO4J_USER = getattr(config, "NEO4J_USER", os.getenv("NEO4J_USER", "neo4j"))
+    NEO4J_PASSWORD = getattr(config, "NEO4J_PASSWORD", os.getenv("NEO4J_PASSWORD", ""))
+    GEMINI_API_KEY = getattr(config, "GEMINI_API_KEY", os.getenv("GEMINI_API_KEY", ""))
+    PINECONE_API_KEY = getattr(config, "PINECONE_API_KEY", os.getenv("PINECONE_API_KEY", ""))
+    PINECONE_INDEX_NAME = getattr(config, "PINECONE_INDEX_NAME", os.getenv("PINECONE_INDEX_NAME", "vietnam-travel"))
+    PINECONE_VECTOR_DIM = int(getattr(config, "PINECONE_VECTOR_DIM", os.getenv("PINECONE_VECTOR_DIM", 768)))
+except ImportError:
+    NEO4J_URI = os.getenv("NEO4J_URI", "")
+    NEO4J_USER = os.getenv("NEO4J_USER", "neo4j")
+    NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "")
+    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+    PINECONE_API_KEY = os.getenv("PINECONE_API_KEY", "")
+    PINECONE_INDEX_NAME = os.getenv("PINECONE_INDEX_NAME", "vietnam-travel")
+    PINECONE_VECTOR_DIM = int(os.getenv("PINECONE_VECTOR_DIM", 768))
 
 EMBED_MODEL = "gemini-embedding-001"
 CHAT_MODEL = "gemini-3.5-flash-lite"
 TOP_K = 5
-INDEX_NAME = config.PINECONE_INDEX_NAME
+INDEX_NAME = PINECONE_INDEX_NAME
 
 try:
-    gemini_client = genai.Client(api_key=config.GEMINI_API_KEY)
+    gemini_client = genai.Client(api_key=GEMINI_API_KEY)
     print("✅ Google Gemini client initialized successfully")
 except Exception as e:
     print(f"❌ Failed to initialize Gemini client: {e}")
     exit(1)
 
 try:
-    pc = Pinecone(api_key=config.PINECONE_API_KEY)
+    pc = Pinecone(api_key=PINECONE_API_KEY)
     index = pc.Index(INDEX_NAME)
     print("✅ Pinecone client initialized successfully")
 except Exception as e:
@@ -27,7 +45,7 @@ except Exception as e:
     exit(1)
 
 try:
-    driver = GraphDatabase.driver(config.NEO4J_URI, auth=(config.NEO4J_USER, config.NEO4J_PASSWORD))
+    driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD))
     with driver.session() as session:
         session.run("RETURN 1")
     print("✅ Neo4j connection established successfully")
@@ -42,7 +60,7 @@ def embed_text(text: str) -> List[float]:
         res = gemini_client.models.embed_content(
             model=EMBED_MODEL,
             contents=text,
-            config={"output_dimensionality": config.PINECONE_VECTOR_DIM}
+            config={"output_dimensionality": PINECONE_VECTOR_DIM}
         )
         return res.embeddings[0].values
     except Exception as e:

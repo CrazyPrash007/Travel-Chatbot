@@ -1,18 +1,30 @@
+import os
 import json
 import time
 from tqdm import tqdm
 from google import genai
 from pinecone import Pinecone, ServerlessSpec
-import config
+
+try:
+    import config
+    GEMINI_API_KEY = getattr(config, "GEMINI_API_KEY", os.getenv("GEMINI_API_KEY", ""))
+    PINECONE_API_KEY = getattr(config, "PINECONE_API_KEY", os.getenv("PINECONE_API_KEY", ""))
+    PINECONE_INDEX_NAME = getattr(config, "PINECONE_INDEX_NAME", os.getenv("PINECONE_INDEX_NAME", "vietnam-travel"))
+    PINECONE_VECTOR_DIM = int(getattr(config, "PINECONE_VECTOR_DIM", os.getenv("PINECONE_VECTOR_DIM", 768)))
+except ImportError:
+    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+    PINECONE_API_KEY = os.getenv("PINECONE_API_KEY", "")
+    PINECONE_INDEX_NAME = os.getenv("PINECONE_INDEX_NAME", "vietnam-travel")
+    PINECONE_VECTOR_DIM = int(os.getenv("PINECONE_VECTOR_DIM", 768))
 
 DATA_FILE = "vietnam_travel_dataset.json"
 BATCH_SIZE = 16
 
-INDEX_NAME = config.PINECONE_INDEX_NAME
-VECTOR_DIM = config.PINECONE_VECTOR_DIM  # 768
+INDEX_NAME = PINECONE_INDEX_NAME
+VECTOR_DIM = PINECONE_VECTOR_DIM  # 768
 
-client = genai.Client(api_key=config.GEMINI_API_KEY)
-pc = Pinecone(api_key=config.PINECONE_API_KEY)
+client = genai.Client(api_key=GEMINI_API_KEY)
+pc = Pinecone(api_key=PINECONE_API_KEY)
 
 existing_indexes = pc.list_indexes().names()
 if INDEX_NAME not in existing_indexes:
