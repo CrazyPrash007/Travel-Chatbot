@@ -893,7 +893,7 @@ def generate_html(nodes_raw, rels_raw, output_path="neo4j_viz.html"):
           <div class="subtitle">360 Nodes • 370 Relationships • Spring Physics</div>
         </div>
       </div>
-      <a href="/" class="cartoon-btn btn-back" id="btnBackToChat" onclick="returnToChatbot(event)">
+      <a href="/#" target="vietnam_chat_main" class="cartoon-btn btn-back" id="btnBackToChat" onclick="returnToChatbot()">
         <span>⬅️ Chatbot</span>
       </a>
     </div>
@@ -1178,61 +1178,27 @@ def generate_html(nodes_raw, rels_raw, output_path="neo4j_viz.html"):
       }});
 
       // Chatbot Link: Send prompt to the existing chat tab and switch to it without closing this graph tab
-      drawerChatBtn.onclick = function(e) {{
-        if (e) e.preventDefault();
-        const chatUrl = '/?q=' + encodeURIComponent('Tell me about ' + n.name + ' in ' + (n.city || 'Vietnam') + ' and top recommendations');
-
+      drawerChatBtn.href = '/?q=' + encodeURIComponent('Tell me about ' + n.name + ' in ' + (n.city || 'Vietnam') + ' and top recommendations');
+      drawerChatBtn.target = 'vietnam_chat_main';
+      drawerChatBtn.onclick = function() {{
         if (window.opener && !window.opener.closed) {{
           try {{
-            window.opener.location.href = chatUrl;
             window.opener.focus();
-            return false;
           }} catch (err) {{}}
         }}
-
-        try {{
-          const chatWin = window.open(chatUrl, 'vietnam_chat_main');
-          if (chatWin) {{
-            chatWin.focus();
-            return false;
-          }}
-        }} catch (err) {{}}
-
-        window.open(chatUrl, 'vietnam_chat_main');
-        return false;
       }};
 
       drawer.style.display = 'block';
     }}
 
     // Switch back to existing chat tab without closing or reloading this graph tab
-    function returnToChatbot(event) {{
-      if (event) event.preventDefault();
-
-      // 1. If opener tab exists and is open, bring it to front
+    function returnToChatbot() {{
       if (window.opener && !window.opener.closed) {{
         try {{
+          window.opener.postMessage('focus_chat', '*');
           window.opener.focus();
-          return false;
-        }} catch (err) {{
-          console.warn("window.opener focus failed:", err);
-        }}
+        }} catch (err) {{}}
       }}
-
-      // 2. Try focusing the named main chat tab
-      try {{
-        const chatWin = window.open('', 'vietnam_chat_main');
-        if (chatWin) {{
-          chatWin.focus();
-          return false;
-        }}
-      }} catch (err) {{
-        console.warn("Named window focus failed:", err);
-      }}
-
-      // 3. Fallback: open chat in named tab without navigating or closing this tab
-      window.open('/', 'vietnam_chat_main');
-      return false;
     }}
 
     drawerClose.onclick = () => {{

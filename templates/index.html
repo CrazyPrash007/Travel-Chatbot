@@ -611,6 +611,13 @@
     // Name the main chat tab so child tabs can switch back seamlessly
     window.name = "vietnam_chat_main";
 
+    // Listen for focus requests from child tabs
+    window.addEventListener('message', (event) => {
+      if (event.data === 'focus_chat') {
+        window.focus();
+      }
+    });
+
     // Auto-fill and submit query if ?q= URL parameter is provided
     window.addEventListener('DOMContentLoaded', () => {
       const urlParams = new URLSearchParams(window.location.search);
